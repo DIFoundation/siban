@@ -7,6 +7,13 @@ contract MembershipRegistration {
     address public owner;
     IERC20 public usdtToken;
 
+    // USDT Addresses for different networks
+    // Mainnet: Official USDT BEP20 on BNB Chain (6 decimals)
+    address private constant MAINNET_USDT = 0x55d398326f99059fF775485246999027B3197955;
+
+    // Testnet: Test USDT on BSC Testnet (6 decimals)
+    // address private constant TESTNET_USDT = 0x7ef95a0FEE0Dd31b22626fA2e10Ee6A223F8a684;
+
     // Max value for uint256 to represent "forever" or "lifetime"
     uint256 private constant LIFETIME_EXPIRY = type(uint256).max; 
 
@@ -52,9 +59,14 @@ contract MembershipRegistration {
     event USDTAddressUpdated(address indexed oldAddress, address indexed newAddress);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
-    constructor(address _usdtToken, address _owner) {
+    /**
+     * @notice Constructor - automatically detects network or accepts custom USDT address
+     * @param _owner Owner address
+     */
+    constructor(address _owner) {
+        require(_owner != address(0), "Invalid owner address");
         owner = _owner;
-        usdtToken = IERC20(_usdtToken);
+        usdtToken = IERC20(MAINNET_USDT);
 
         // CATEGORY IMPLEMENTATION
         _createCategory("Stakeholder Circle"); // ID 1
@@ -266,6 +278,7 @@ contract MembershipRegistration {
     // -----------------------------
     function updateUSDTAddress(address newUSDTAddress) external onlyOwner {
         require(newUSDTAddress != address(0), "Invalid address");
+        require(newUSDTAddress != address(usdtToken), "Same address");
         address oldAddress = address(usdtToken);
         usdtToken = IERC20(newUSDTAddress);
         emit USDTAddressUpdated(oldAddress, newUSDTAddress);
@@ -273,6 +286,7 @@ contract MembershipRegistration {
 
     function withdrawUSDT(address wallet, uint256 amount) external onlyOwner {
         require(wallet != address(0), "Invalid wallet address");
+        require(amount > 0, "Amount must be > 0");
         uint256 balance = usdtToken.balanceOf(address(this));
         require(balance >= amount, "Insufficient balance");
         require(usdtToken.transfer(wallet, amount), "Transfer failed");
@@ -287,6 +301,7 @@ contract MembershipRegistration {
 
     function transferOwnership(address newOwner) external onlyOwner {
         require(newOwner != address(0), "Invalid address");
+        require(newOwner != owner, "Already owner");
         address oldOwner = owner;
         owner = newOwner;
         emit OwnershipTransferred(oldOwner, newOwner);
@@ -336,5 +351,146 @@ contract MembershipRegistration {
     
     function getMembershipExpiry(address user, uint256 tierId) external view returns (uint256) {
         return userMembershipExpiry[user][tierId];
+    }
+
+    function getContractBalance() external view returns (uint256) {
+        return usdtToken.balanceOf(address(this));
+    }
+
+    function getUSDTAddress() external view returns (address) {
+        return address(usdtToken);
+    }
+
+    // -----------------------------
+    // BATCH VIEW FUNCTIONS FOR DISPLAY
+    // -----------------------------
+    
+    function getAllCategories() external view returns (
+        uint8[] memory ids,
+        string[] memory names,
+        bool[] memory activeStatuses,
+        uint256[] memory createdAts
+    ) {
+        ids = new uint8[](categoryCount);
+        names = new string[](categoryCount);
+        activeStatuses = new bool[](categoryCount);
+        createdAts = new uint256[](categoryCount);
+        
+        for (uint8 i = 1; i <= categoryCount; i++) {
+            ids[i-1] = i;
+            names[i-1] = categories[i].name;
+            activeStatuses[i-1] = categories[i].isActive;
+            createdAts[i-1] = categories[i].createdAt;
+        }
+        
+        return (ids, names, activeStatuses, createdAts);
+    }
+    
+    function getTiersByCategory(uint8 categoryId) external view returns (
+        uint256[] memory tierIds,
+        string[] memory tierNames,
+        uint256[] memory prices,
+        bool[] memory activeStatuses,
+        uint32[] memory durations,
+        bool[] memory isDonationBasedFlags
+    ) {
+        uint256 count = 0;
+        for (uint256 i = 1; i <= tierCount; i++) {
+            if (tiers[i].categoryId == categoryId) {
+                count++;
+            }
+        }
+        
+        tierIds = new uint256[](count);
+        tierNames = new string[](count);
+        prices = new uint256[](count);
+        activeStatuses = new bool[](count);
+        durations = new uint32[](count);
+        isDonationBasedFlags = new bool[](count);
+        
+        uint256 index = 0;
+        for (uint256 i = 1; i <= tierCount; i++) {
+            if (tiers[i].categoryId == categoryId) {
+                tierIds[index] = i;
+                tierNames[index] = tiers[i].name;
+                prices[index] = tiers[i].price;
+                activeStatuses[index] = tiers[i].isActive;
+                durations[index] = tiers[i].durationInDays;
+                isDonationBasedFlags[index] = tiers[i].isDonationBased;
+                index++;
+            }
+        }
+        
+        return (tierIds, tierNames, prices, activeStatuses, durations, isDonationBasedFlags);
+    }
+    
+    function getAllTiers() external view returns (
+        uint256[] memory tierIds,
+        string[] memory tierNames,
+        uint256[] memory prices,
+        uint8[] memory categoryIds,
+        string[] memory categoryNames,
+        bool[] memory activeStatuses,
+        uint32[] memory durations,
+        bool[] memory isDonationBasedFlags
+    ) {
+        tierIds = new uint256[](tierCount);
+        tierNames = new string[](tierCount);
+        prices = new uint256[](tierCount);
+        categoryIds = new uint8[](tierCount);
+        categoryNames = new string[](tierCount);
+        activeStatuses = new bool[](tierCount);
+        durations = new uint32[](tierCount);
+        isDonationBasedFlags = new bool[](tierCount);
+        
+        for (uint256 i = 1; i <= tierCount; i++) {
+            tierIds[i-1] = i;
+            tierNames[i-1] = tiers[i].name;
+            prices[i-1] = tiers[i].price;
+            categoryIds[i-1] = tiers[i].categoryId;
+            categoryNames[i-1] = categories[tiers[i].categoryId].name;
+            activeStatuses[i-1] = tiers[i].isActive;
+            durations[i-1] = tiers[i].durationInDays;
+            isDonationBasedFlags[i-1] = tiers[i].isDonationBased;
+        }
+        
+        return (tierIds, tierNames, prices, categoryIds, categoryNames, activeStatuses, durations, isDonationBasedFlags);
+    }
+    
+    function getUserActiveMemberships(address user) external view returns (
+        uint256[] memory tierIds,
+        string[] memory tierNames,
+        uint8[] memory categoryIds,
+        string[] memory categoryNames,
+        uint256[] memory expiryTimestamps
+    ) {
+        uint256 count = 0;
+        for (uint256 i = 1; i <= tierCount; i++) {
+            uint256 expiry = userMembershipExpiry[user][i];
+            if (expiry == LIFETIME_EXPIRY || expiry > block.timestamp) {
+                count++;
+            }
+        }
+        
+        tierIds = new uint256[](count);
+        tierNames = new string[](count);
+        categoryIds = new uint8[](count);
+        categoryNames = new string[](count);
+        expiryTimestamps = new uint256[](count);
+        
+        uint256 index = 0;
+        for (uint256 i = 1; i <= tierCount; i++) {
+            uint256 expiry = userMembershipExpiry[user][i];
+            if (expiry == LIFETIME_EXPIRY || expiry > block.timestamp) {
+                tierIds[index] = i;
+                tierNames[index] = tiers[i].name;
+                categoryIds[index] = tiers[i].categoryId;
+                categoryNames[index] = categories[tiers[i].categoryId].name;
+                expiryTimestamps[index] = expiry;
+                index++;
+            }
+        }
+        
+        return (tierIds, tierNames, categoryIds, categoryNames, expiryTimestamps);
     }
 }
