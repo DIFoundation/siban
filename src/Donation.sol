@@ -8,13 +8,8 @@ contract Donation {
     IERC20 public usdtToken;
 
     // Official USDT BEP20 address on BNB Chain (Binance-Peg BSC-USD)
-    // https://bscscan.com/token/0x55d398326f99059ff775485246999027b3197955
     address private constant OFFICIAL_USDT_BSC = 0x55d398326f99059fF775485246999027B3197955;
     
-    // Testnet: Common test USDT tokens (you can choose based on availability)
-    // Option 1: https://testnet.bscscan.com/token/0x7ef95a0fee0dd31b22626fa2e10ee6a223f8a684
-    // address private constant TESTNET_USDT = 0x7ef95a0FEE0Dd31b22626fA2e10Ee6A223F8a684;
-
     mapping(address => uint256) public donations;
     uint256 public totalDonationsReceived;
 

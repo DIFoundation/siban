@@ -7,12 +7,8 @@ contract MembershipRegistration {
     address public owner;
     IERC20 public usdtToken;
 
-    // USDT Addresses for different networks
     // Mainnet: Official USDT BEP20 on BNB Chain (6 decimals)
     address private constant MAINNET_USDT = 0x55d398326f99059fF775485246999027B3197955;
-
-    // Testnet: Test USDT on BSC Testnet (6 decimals)
-    // address private constant TESTNET_USDT = 0x7ef95a0FEE0Dd31b22626fA2e10Ee6A223F8a684;
 
     // Max value for uint256 to represent "forever" or "lifetime"
     uint256 private constant LIFETIME_EXPIRY = type(uint256).max; 
